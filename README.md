@@ -30,5 +30,5 @@ To see who’s contributed to our community, visit the `contributors` file. We w
 ## Stay Connected
 
 Don’t miss out on any updates from the community. Watch this repo to get notifications about new discussions and updates.
-
+something ayaan ku daray 
 We appreciate your commitment to our shared goal of making technology more inclusive and accessible for the Somali community!
