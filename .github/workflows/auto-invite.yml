@@ -1,0 +1,49 @@
+name: Automatic Organization Invitation
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  invite:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Invite on label
+        uses: actions/github-script@v6
+        if: github.event.label.name == 'Invitation'
+        with:
+          github-token: ${{ secrets.INVITE_TOKEN }}
+          script: |
+            const username = context.payload.issue.user.login;
+
+            try {
+              // Add user to the organization
+              await github.rest.orgs.createInvitation({
+                org: context.repo.owner,
+                username: username,
+              });
+              
+              // Add comment to the issue
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: `@${username} has been invited to join the organization! Please check your email for the invitation.`
+              });
+              
+              // Close the issue
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                state: 'closed'
+              });
+            } catch (error) {
+              console.log(error);
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: `There was an error inviting @${username}. Please check if the user is already a member or if there are any other issues.`
+              });
+            }

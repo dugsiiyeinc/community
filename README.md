@@ -6,7 +6,7 @@ Welcome to the Dugsiiye Community GitHub repository! This is the central hub for
 
 We are thrilled to have new members join our community! To join us:
 
-1. Click here to [open an issue](https://github.com/dugsiiyeinc/community/issues/new?title=Please+invite+me+to+the+GitHub+Organization) and request an invitation to become part of the Dugsiiye GitHub Organization.
+1. Click here to [open an issue](https://github.com/dugsiiyeinc/community/issues/new?title=Please+invite+me+to+the+GitHub+Organization&labels=Invitation) and request an invitation to become part of the Dugsiiye GitHub Organization.
 
 ## Asking Questions and Starting Discussions
 
