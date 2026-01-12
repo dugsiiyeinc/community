@@ -1,0 +1,61 @@
+name: Automatic Organization Invitation
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  invite:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Invite on issue creation
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.ON_OPEN_ISSUE }}
+          script: |
+            const username = context.payload.issue.user.login;
+
+            // 🎲 Random welcome messages
+            const messages = [
+              `🎉 Welcome aboard @${username}! Your invitation is on the way 🚀 Let’s build something amazing together!`,
+              `🔥 Hey @${username}! You’ve been invited to join the crew. Check your inbox and jump in!`,
+              `🚀 Boom! @${username}, your org invite has been sent. Ready to conquer new horizons.`,
+              `🌟 Hello @${username}! You’re officially invited to the team. Big things ahead!`,
+              `🏆 @${username}, welcome to the squad! Invitation sent — let’s make history together!`
+            ];
+
+            // Pick a random message
+            const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+
+            try {
+              await github.rest.orgs.createInvitation({
+                org: context.repo.owner,
+                invitee_id: (await github.rest.users.getByUsername({ username })).data.id
+              });
+
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: randomMessage
+              });
+
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                state: 'closed'
+              });
+
+            } catch (error) {
+              console.error("🚨 Invitation Error:", error);
+
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: `⚠️ Oops @${username}! Something went wrong while sending your invitation.  
+                Please contact a maintainer if the issue persists.`
+              });
+            }
+
