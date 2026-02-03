@@ -14,36 +14,98 @@ jobs:
           github-token: ${{ secrets.ON_OPEN_ISSUE }}
           script: |
             const username = context.payload.issue.user.login;
+            const org = context.repo.owner;
+            const repo = context.repo.repo;
+            const issue_number = context.issue.number;
 
             // 🎲 Random welcome messages
             const messages = [
-              `🎉 Welcome aboard @${username}! Your invitation is on the way 🚀 Let’s build something amazing together!`,
-              `🔥 Hey @${username}! You’ve been invited to join the crew. Check your inbox and jump in!`,
-              `🚀 Boom! @${username}, your org invite has been sent. Ready to conquer new horizons.`,
-              `🌟 Hello @${username}! You’re officially invited to the team. Big things ahead!`,
-              `🏆 @${username}, welcome to the squad! Invitation sent — let’s make history together!`
+              ` Welcome aboard @${username}! Your invitation is on the way 🚀 Let’s build something amazing together!`,
+              ` Hey @${username}! You’ve been invited to join the crew. Check your inbox and jump in!`,
+              ` Boom! @${username}, your org invite has been sent. Ready to conquer new horizons.`,
+              ` Hello @${username}! You’re officially invited to the team. Big things ahead!`,
+              ` @${username}, welcome to the squad! Invitation sent — let’s make history together!`
             ];
 
-            // Pick a random message
-            const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+            const alreadyMemberMessage = `✅ @${username}, you are already a member of the ${org} organization. Welcome back!`;
+            const pendingMessage = `⏳ @${username}, an invitation has already been sent to your account. Please check your email or GitHub notifications.`;
 
             try {
+              // 1) Check whether the user is already a member
+              try {
+                await github.rest.orgs.getMembershipForUser({ org, username });
+                // If the call above succeeds, the user is already a member
+                await github.rest.issues.createComment({
+                  owner: org,
+                  repo,
+                  issue_number,
+                  body: alreadyMemberMessage
+                });
+
+                await github.rest.issues.update({
+                  owner: org,
+                  repo,
+                  issue_number,
+                  state: 'closed'
+                });
+
+                return;
+              } catch (membershipError) {
+                // getMembershipForUser returns 404 if the user is NOT a member
+                if (membershipError.status && membershipError.status !== 404) {
+                  // Re-throw unexpected membership check errors
+                  throw membershipError;
+                }
+                // If status is 404 -> continue to invitation check/send
+              }
+
+              // 2) Check whether there's already a pending invitation for this user
+              const invitations = await github.rest.orgs.listInvitations({ org });
+              const userInvited = invitations.data.find(inv =>
+                (inv.invitee && inv.invitee.login === username) ||
+                inv.login === username
+              );
+
+              if (userInvited) {
+                await github.rest.issues.createComment({
+                  owner: org,
+                  repo,
+                  issue_number,
+                  body: pendingMessage
+                });
+
+                await github.rest.issues.update({
+                  owner: org,
+                  repo,
+                  issue_number,
+                  state: 'closed'
+                });
+
+                return;
+              }
+
+              // 3) Not a member and no pending invite -> create an invitation
+              const user = (await github.rest.users.getByUsername({ username })).data;
+
               await github.rest.orgs.createInvitation({
-                org: context.repo.owner,
-                invitee_id: (await github.rest.users.getByUsername({ username })).data.id
+                org,
+                invitee_id: user.id
               });
 
+              // Pick a random message
+              const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+
               await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
+                owner: org,
+                repo,
+                issue_number,
                 body: randomMessage
               });
 
               await github.rest.issues.update({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
+                owner: org,
+                repo,
+                issue_number,
                 state: 'closed'
               });
 
@@ -58,4 +120,3 @@ jobs:
                 Please contact a maintainer if the issue persists.`
               });
             }
-
